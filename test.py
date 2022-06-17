@@ -9,7 +9,7 @@ direction='1.순두부를 잘 넣고 끊인다.'
 
 try:
     # 데이터 인서트
-    
+        
     # db접속
     connection = get_connection()
 
