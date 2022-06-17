@@ -45,5 +45,6 @@ try:
 
 except mysql.connector.Error as e:
     print(e)
+    connection.rollback()
     cursor.close()
     connection.close()
