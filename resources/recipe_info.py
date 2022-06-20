@@ -1,6 +1,7 @@
 from http import HTTPStatus
 import http
 from flask import request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restful import Resource
 from mysql.connector.errors import Error
 from mysql_connection import get_connection
@@ -54,14 +55,40 @@ class RecipeResource(Resource):
                 "info":result_list[0]}, HTTPStatus.OK
     
     #데이터를 업데이트하는 api들은 put함수를 사용한다.
+    @jwt_required()
     def put(self, recipe_id):
         #클라이언트에서 보낸 body의 json데이터를 받아오는 코드
         data=request.get_json()
         #print(data)
 
+        #user_id를 create_access_token(user_id)로 암호화 했다.
+        #인증토큰을 복호화 한다.
+        user_id=get_jwt_identity()
+
         try:
             # db접속
             connection = get_connection()
+
+            # 쿼리작성
+            query='''select user_id from recipe
+                    where id=%s
+                    ; '''
+
+            record=(recipe_id,)
+
+            # 커서
+            cursor=connection.cursor(dictionary=True)
+            # 실행
+            cursor.execute(query, record)
+
+            result_list=cursor.fetchall()
+
+            recipe=result_list[0]
+
+            if recipe['user_id'] != user_id:
+                cursor.close()
+                connection.close()
+                return {'error':'타인의 레시피를 수정할수 없습니다.'}, 401
 
             # 쿼리작성
             query='''update recipe
