@@ -2,7 +2,7 @@ from datetime import timedelta
 from http import HTTPStatus
 import http
 from flask import request
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, get_jwt, jwt_required
 from flask_restful import Resource
 from mysql.connector.errors import Error
 from mysql_connection import get_connection
@@ -185,9 +185,9 @@ class UserLoginResource(Resource):
             username=result_list[0]['username']
             #user_id값은 보안이 중요하다, 해킹 가능성이 있으므로
             #JWT로 암호화해서 보낸다.
-            #access_token=create_access_token(user_id)
+            access_token=create_access_token(user_id)
             #토큰 유효기한 셋팅
-            access_token=create_access_token(user_id, expires_delta=timedelta(minutes=1))
+            #access_token=create_access_token(user_id, expires_delta=timedelta(minutes=1))
             
             return {"result":"success", "access_token":access_token, "username":username}, HTTPStatus.OK
 
@@ -201,3 +201,21 @@ class UserLoginResource(Resource):
             #print('finally')
             cursor.close()
             connection.close()
+
+
+#로그아웃(토큰 취소)
+jwt_blacklist=set()     #로그아웃 한 토큰 집합(데이터)
+# 메소드 : post
+# 경로 : users/logout
+# 데이터 : Header user_id토큰
+#로그인시 JWT라이브러리로 토큰을 발행하는데 유효기간이 들어 있다.
+#로그아웃을 하면 해당 토큰을 set에 넣는다. 해당 토큰은 revoke(취소) 되었다는 의미이다.
+class UserLogoutResource(Resource):
+    @jwt_required(optional=False)
+    def post(self):
+        jti=get_jwt()['jti']        #토큰을 가져온다.
+        #print(jti)
+
+        jwt_blacklist.add(jti)      #토큰을 집합에 넣는다.
+
+        return {"result":"success"}, HTTPStatus.OK
